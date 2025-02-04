@@ -1,0 +1,719 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>
+			A finite volume scheme for fractional diffusion
+		</title>
+
+		<link rel="stylesheet" href="reveal.js/dist/reset.css">
+		<link rel="stylesheet" href="reveal.js/dist/reveal.css">
+		<link rel="stylesheet" href="reveal.js/dist/theme/sky.css">
+		<link rel="stylesheet" href="reveal.js/dist/space.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="reveal.js/plugin/highlight/monokai.css">
+	</head>
+	
+	<body>
+
+		<div class = "video-container">
+			<video autoplay loop muted>
+				<source src="vecteezy_abstract-wave-particles-pattern-3d-rendering_30337777_348.mp4" type="video/mp4">
+			</video>
+		</div>
+
+	
+
+		<div class="reveal"> 
+
+			<div class="slides">
+
+
+                <!--################################ -->
+				<section>
+					<h1 style="font-size:50px; color:black"> Finite Element approximation of </h1>
+					<h1 style="font-size:50px; color:black"> fractional nonlinear PDEs  </h1>
+
+					<div id ="provac" style="font-size:20px;">
+						Stefano Fronzoni <br>
+						3 February 2024 <br>
+						<b> University of Warwick</b> <br>
+						<em> Junior Analysis and Probability Seminar </em>
+					</div>
+
+
+				
+				
+                </section>
+                <!--########################################################## -->
+				<section>
+					<h3 style="font-size:70px"> Presentation plan </h3>
+                    <hr style="width:80%; height:1px; ;color:black;background-color:black">
+                    <ul>
+					<li style="font-size:30px;"> The fractional Laplacian </li>
+					<li style="font-size:30px;"> The fractional porous medium equation </li>
+					<li style="font-size:30px;"> Finite Element approximation </li>
+					<li style="font-size:30px;"> Discrete-in-time approximation </li>
+					<li style="font-size:30px;"> The fractional Keller-Segel model </li>
+                    </ul>
+				</section>
+                <!--######################################################## -->
+				<section>
+					<!--################### -->
+					<section>
+                        <h3> The fractional Laplacian </h3>
+                        <hr style="width:90%; height:1px; ;color:black;background-color:black">
+                    </section>
+					<!--################### -->
+					<section data-background-color="black">
+                        <p style ="font-size:25px"> <em>What is the classical mathematical operator used to model diffusion?</em> </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> Standard Laplacian $\Delta = \nabla \cdot \nabla = \frac{\partial^{2}}{\partial x_{1}^{2}} + \dots + \frac{\partial^{2}}{\partial x_{n}^{2}}$ </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> Consider the <font color ="green"> Fourier Transform </font> for a function $u: \mathbb{R}^{d} \to \mathbb{R}$ <br> $\mathcal{F}[u](\xi) = \hat{u}(\xi) :=  \int_{\R^{d}} u(x) e^{-2 \pi i\xi \cdot x} dx$ </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> \[ (-\Delta) u(x) \overset{\mathcal{F}}{\longrightarrow} (2 \pi |\xi|)^{2} \hat{u}(\xi) \] </p>
+                        <p class="fragment" style ="font-size:25px"> <u>Idea</u>: <em>change the exponent we get out from the action of the Fourier transform</em> </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> Define the <font color = "fuchsia"> fractional Laplacian </font> as the operator <font color = "fuchsia"> $(-\Delta)^{s}$ </font> such that <font color = "fuchsia"> \[(-\Delta)^{s}u \overset{\mathcal{F}}{\longrightarrow} (2 \pi |\xi|)^{2s}  \hat{u} \]  </font> </p>
+                    </section>
+					<!--################### -->
+					<section data-background-color="black">
+						<p style ="font-size:25px"> <em>How to give an explicit representation of the fractional Laplacian?</em> </p> 
+						<p>
+						<div style="background-color:rgb(79, 72, 185); padding: 1px;">
+							<div  style="background-color:black; margin-left:10px; padding: 1px;">
+								<p align="left" style ="font-size:25px; margin-left:5px"> <b> Fractional Laplacian: Singular integral definition </b> </p>
+								<p align="left" style ="font-size:25px; margin-left:5px">Let $u: \mathbb{R}^{d} \rightarrow \mathbb{R}$, the fractional Laplacian of $u$ is given by
+								\[
+								\begin{aligned}
+								(-\Delta)^{s}u(x) &= \mathcal{C}(d, s) \; \textup{P.V.} \int_{\mathbb{R}^{d}} \frac{u(x) - u(y)}{|x-y|^{d + 2s}} dy \\
+												&= \mathcal{C}(d, s) \; \lim_{\epsilon \rightarrow 0} \int_{\mathbb{R}^{d} \setminus B_{\epsilon}} \frac{u(x) - u(y)}{|x-y|^{d + 2s}} dy
+								\end{aligned}
+								\]
+								</p>
+							</div>
+						</div>
+						</p>
+					</section>
+
+
+					<section data-background-color="black"> 
+						<p>
+						<div style="background-color:rgb(79, 72, 185); padding: 1px;">
+							<div  style="background-color:black; margin-left:10px; padding: 1px;">
+								<p align="left" style ="font-size:25px; margin-left:5px"> <b> Fractional Sobolev space </b> </p>
+								<p align="left" style ="font-size:25px; margin-left:5px">
+									\[ H^{s}(\Omega) := \bigg \{ u \in L^{2}(\Omega):  |u|^{2}_{H^{s}(\Omega)} := \int_{\Omega} \int_{\Omega} \frac{|u(x) - u(y)|^{2}}{|x - y|^{d + 2 s}} \textrm{d}x \, \textrm{d}y < \infty \bigg \}, \]
+									with norm
+									\[ \| u \|_{H^{s}(\Omega)} := \big( \|u\|_{L^{2}(\Omega)}^{2} + |u|^{2}_{H^{s}(\Omega)} \big)^{\frac{1}{2}}. \]
+								</p>
+							</div>
+						</div>
+						</p>
+					</section>
+					<!--################### -->
+					<section data-background-color="black">
+
+						<p style ="font-size:30px"> Physical interpretation </p>
+						<p style="font-size:20px"> Standard Laplacian $\Delta u = \frac{\partial^{2}u}{\partial x_{1}^{2}} + \dots + \frac{\partial^{2}u}{\partial x_{n}^{2}}$
+						<p align = "left" style="font-size:25px"> Standard <font color ="orange" >heat equation </font> $\frac{\partial u}{\partial t} = \Delta u$: modelling <font color="orange">Brownian motion </font>, continuous version of a <font color="orange"> standard symmetric random walk</font> </p>
+						</p>
+						<div style="font-size:15px" >
+						<img data-src="BrownianMot.png" width="90%"></img>
+						</div>
+						<p>
+						<video data-autoplay src="Brown.mp4" height="300px" loop="loop"></video>
+						</p>
+					</section>
+
+					<section data-background-color="black">
+
+						<p style ="font-size:30px"> Physical interpretation </p>
+						<p style="font-size:20px"> Fractional Laplacian $(-\Delta)^{s}u(x) = \mathcal{C}(d, s) \; \textup{P.V.} \int_{\mathbb{R}^{d}} \frac{u(x) - u(y)}{|x-y|^{d + 2s}} dy$ 
+						<p align = "left" style="font-size:25px"> <font color ="aqua" > Fractional heat equation </font> $\frac{\partial u}{\partial t} = - (-\Delta)^{s} u$: modelling <font color="aqua"> Lévy walk </font>, continuous version of an <font color="aqua"> energized random walk</font>, allowing  <font color="aqua"> long jumps</font> </p>
+						</p>
+						<div style="font-size:15px;" >
+						<img data-src="BrownianTikz.png" width="60%"></img>
+						</div>
+						<p>
+						<video data-autoplay src="Levy.mp4" height="300px" loop="loop"></video>
+						</p>
+					</section>
+					<!--################### -->
+					<section data-background-video = "videoplaybacteria.mp4" data-background-video-loop="loop" >
+						<div class = "fragment fade-up" style="background-color:rgb(215, 211, 211); padding:10px;">
+								Applications:
+								<ul>
+								<li style="font-size:25px"> <b>Biology</b>: growth of bacteria, movement of antibodies, predator search patterns  </li>
+								<li style="font-size:25px"> <b> Physics</b>: cristal dislocation, electronagnetic fluids, ground-water solute transport </li>
+								<li style="font-size:25px"> <b> Social sciences</b>: human travel </li>
+								</ul>
+							</div>
+					</section>
+
+				</section>
+				<!--######################################################## -->
+                <section>
+					<!--################### -->
+                    <section>
+                        <h3> The Fractional Porous medium equation </h3>
+                        <hr style="width:90%; height:1px; ;color:black;background-color:black">
+                    </section>
+					<!--################### -->
+                    <section data-background-color="black">
+                        <p style ="font-size:35px"> <em> Porous medium equation </em> </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> density $\rho = \rho(x, t)$, velocity field $\bm{v} = \bm{v}(x, t)$ </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> \[ \frac{\partial \rho}{\partial t} + \nabla \cdot (\rho \bm{v}) = 0 \] </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> potential $c= c(x, t)$ </p>
+						<p align="left" class="fragment" style ="font-size:25px"> \[ \bm{v} = - \nabla c \] </p>
+                        <p class="fragment" style ="font-size:25px"> <u> <font color ="red" > Idea </u>: <em> $ \quad - (-\Delta)^{s} c = \rho$ </em> </font>, $0 < s < 1$ </p>
+                        <p align="left" class="fragment" style ="font-size:25px"> We relate the potential and the density using the <font color = "fuchsia"> fractional Laplacian </font>  <font color = "fuchsia"> $(-\Delta)^{s}$ </font> </p>
+                    </section>
+					<!--################### -->
+					<section data-background-color="black">
+						<p style ="font-size:25px"> <em>What is the fractional Laplacian?</em> </p> 
+						<p>
+						<div style="background-color:rgb(79, 72, 185); padding: 1px;">
+							<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+								<p align="left" style ="font-size:25px; margin-left:5px"> <b> Spectral fractional Laplacian </b> </p>
+								<p align="left" style ="font-size:25px; margin-left:5px">Let $\Omega$ be an open, bounded, Lipschitz domain. Let $\{ \psi_{k} \}_{k \geq 1}$ the eigenfunctions of the Laplace operator with a boundary condition $\mathcal{B}(\psi) = 0$, satisfying the eigenvalue problem
+									\[
+										\left \{ \begin{array}{ll}
+											-\Delta \psi = \lambda \psi & \textrm{in } \Omega,  \\
+											\mathcal{B}(\psi) = 0 & \textrm{on } \partial \Omega.
+										\end{array} \right. \]
+										The spectral fractional Laplacian with boundary condition $\mathcal{B}$ can then be defined by 
+											\[ (-\Delta_{\mathcal{B}})^{s} u := \sum_{k=1}^{\infty} \lambda_{k}^{s} u_{k} \psi_{k} \quad \textrm{with } u_{k} = \int_{\Omega} u \psi_{k} \,\text{d}x.
+												\]
+			
+								</p>
+							</div>
+						</div>
+						</p>
+					</section>
+
+					<section data-background-color="black"> 
+						<p>
+						<div style="background-color:rgb(79, 72, 185); padding: 1px;">
+							<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+								<p align="left" style ="font-size:25px; margin-left:5px"> <b> Spectral fractional Sobolev space </b> </p>
+								<p align="left" style ="font-size:25px; margin-left:5px">Let $\Omega$ be an open, bounded, Lipschitz domain. Let $\{ \psi_{k} \}_{k \geq 1}$ the eigenfunctions of the Laplace operator with a boundary condition $\mathcal{B}(\psi) = 0$, satisfying the eigenvalue problem
+									\[ \mathbb{H}^s_{\mathcal{B}}(\Omega) := \Bigg \{ u(\cdot) = \sum_{k=1}^{\infty} u_{k} \psi_{k}(\cdot) \in L^{2}(\Omega): \|u\|^{2}_{\mathbb{H}^s_{\mathcal{B}}(\Omega)} := \sum_{k=1}^{\infty} \lambda_{k}^{s} u_{k}^{2} < \infty \Bigg \} \]
+									\[ \textrm{with } u_{k} := \int_{\Omega} u(x) \psi_{k}(x) \textrm{d}x. \]
+			
+								</p>
+							</div>
+						</div>
+						</p>
+						<p align="left" class="fragment" style ="font-size:25px"> <em> What does this give us more in terms of applications? </em> </p>
+					</section>
+					<!--################### -->
+					<section data-background-image = "structure-1400x640.jpg">
+						<div class = "fragment fade-up" style="background-color:rgb(180, 217, 228); padding:10px;">
+								Applications:
+								<ul>
+								<li style="font-size:25px"> <em>Filtration of a fluid through a porous stratum</em>: different pores, tubes and water filaments can make the phenomenon difficult to study $\Rightarrow$ standard models fail in modelling  </li>
+								<li style="font-size:25px"> Fractional Laplacian models <b>non-local interactions and effects </b> </li>
+								<li style="font-size:25px"> More realistic in certain contexts (hydrological setting), where the fluid in the porous medium can contribute to the flux at any point with long jumps  </li>
+								</ul>
+							</div>
+					</section>
+					<!--################### -->
+					<section data-background-color="black">
+						<p style ="font-size:30px"> <em> Porous medium equation with a fractional potential </em> </p>
+						<p style ="font-size:25px">
+						\[ \left \{ \begin{aligned} &\frac{\partial \rho}{\partial t} = \Delta \rho - \nabla \cdot (\rho \nabla c) & \textrm{in } \Omega \times (0, \infty) , \\
+						& - (-\Delta)^{s} c = \rho^{\ast} = \rho - \int_{\Omega} \rho \, \text{d}x & \textrm{in } \Omega \times (0, \infty), \\
+						&\partial_{n} \rho = 0, \quad \partial_{n} c = 0 & \textrm{on }\partial \Omega \times (0, \infty). \end{aligned} \right. \]
+					 </p>
+					 <p style ="font-size:25px" align="left"> For us $\Omega$ will be a <u> bounded open polygonal domain </u> in $\mathbb{R}^{2}$ or a <u> bounded open Lipschitz polyhedral
+						domain </u> in $\mathbb{R}^{3}$. </p>
+					 <p align="left" class="fragment" style ="font-size:25px">
+						<b> <font color = "SeaGreen"> Weak formulation </font> </b> <br> </p>
+					<p  class="fragment" style ="font-size:25px">	
+						Let $V = H^{1}(\Omega)$, find  $\rho \in L^{2}(0, T; V)$ with $\frac{\partial \rho}{\partial t} \in L^{\infty}(0, T; V')$ such that
+						\[ \Big\langle \frac{\partial \rho}{\partial t}, \phi \Big\rangle = - \int_{\Omega} \nabla \rho \cdot \nabla \phi + \int_{\Omega} \rho \nabla c \cdot \nabla \phi \quad \text{for all } \phi \in V, \text{ and a. e. } t \in (0, T], \]
+						where 
+						\[ -(-\Delta_{\mathrm{N}})^{s} c = \rho^{\ast} \textrm{ in } \Omega, \]
+						subject to the initial condition $\rho(x, 0) = \rho_{0}(x)$, where $\rho_{0} \in L^{\infty}(\Omega)$ and <br> $\rho_{0}(x) \geq 0$ for a.e. $x \in \Omega$.
+					</p>
+					</section>
+					<!--################### -->
+					<section data-background-color="black">
+						<p style ="font-size:30px"> <em> Important property  </em>: <font color="FireBrick"> decay in time of the $L^{\infty}$ norm in space </font>  </p>
+						<p>
+							<div style="background-color:rgb(190, 60, 60); padding: 1px;">
+								<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+									<p align="left" style ="font-size:25px; margin-left:5px"> <b> Lemma </b> </p>
+									<p align="left" style ="font-size:25px; margin-left:5px">
+										Let $\rho$ be a nonnegative strong solution of the fractional porous medium equation and let $F \in C^{2}([0, \infty))$ be convex and let $F(\rho_{0}) \in L^{1}(\Omega)$. Then 
+										\[ \frac{d}{dt} \int_{\Omega} F(\rho)\, \text{d}x \leq 0. \]
+									</p>
+								</div>
+							</div>
+							</p>
+							<p>
+								<div style="background-color:rgb(190, 60, 60); padding: 1px;">
+									<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+										<p align="left" style ="font-size:25px; margin-left:5px"> <b> Corollary </b> </p>
+										<p align="left" style ="font-size:25px; margin-left:5px">
+											Let $\rho$ be be a nonnegative strong solution of the fractional porous medium equation. The following result holds: 
+									\[ \|\rho(t)\|_{L^{\infty}(\Omega)} \leq C \|\rho_{0}\|_{L^{\infty}(\Omega)}. \]
+										</p>
+									</div>
+								</div>
+								</p>
+					</section>
+
+
+					<section data-background-color="black">
+						<p style ="font-size:30px"> <em> Important property  </em>: <font color="FireBrick"> decay in time for the free energy functional </font>  </p>
+						<p align="left" style ="font-size:25px" > Let us define 
+							\[ G(s) := s(\log s - 1) + 1 \quad \text{for } s > 0 \quad \text{and} \quad G(0):= 1\]
+							and the free energy functional
+							\[ E(\rho) := \int_{\Omega} G(\rho) \, \text{d} x - \frac{1}{2} \int_{\Omega} c \rho \, \text{d}x. \]
+						</p>
+						<p>
+							<div style="background-color:rgb(190, 60, 60); padding: 1px;">
+								<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+									<p align="left" style ="font-size:25px; margin-left:5px"> <b> Lemma </b> </p>
+									<p align="left" style ="font-size:25px; margin-left:5px">
+										Let $\rho$ be a nonnegative strong solution of the fractional porous medium equation. Then the following free energy identity holds for all $t\geq 0$ 
+										\[ \frac{d}{dt} E(\rho) = - \int_{\Omega} \rho |\nabla (\log \rho - c)|^{2} \, \text{d}x \leq 0 . \]
+									</p>
+								</div>
+							</div>
+							</p>
+					</section>
+					<!--################### -->
+				
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="MediumSeaGreen"> Regularized weak formualtion </font> </b> </p>
+					<p style ="font-size:25px" align="left"> <u> Ingredients </u>: 
+					<ul>
+						<li style="font-size:25px"> cut-off function $\beta_{\delta}^{L}(\cdot)$ with parameters $0< \delta < 1$, $L>1$
+							\[ \beta_{\delta}^{L}(s) = \left \{ \begin{array}{ll} \delta & s \leq \delta, \\ s & \delta < s < L, \\ L & s \geq L. \end{array} \right. \] </li>
+						</ul> </p>
+						<p  class="fragment" style ="font-size:20px">	
+							Find  $\rho_{\delta, L} \in L^{2}(0, T; V)$ with $\frac{\partial \rho}{\partial t} \in L^{\infty}(0, T; V')$ such that
+							\[ \Big\langle \frac{\partial \rho_{\delta, L}}{\partial t}, \phi \Big\rangle = - \int_{\Omega} \nabla \rho_{\delta, L} \cdot \nabla \phi + \int_{\Omega} \beta_{\delta}^{L}(\rho_{\delta, L}) \nabla c_{\delta, L} \cdot \nabla \phi \quad \text{for all } \phi \in V \quad \text{and a.e. } t \in (0, T], \]
+							where 
+							\[ -(-\Delta_{\mathrm{N}})^{s} c = \rho_{\delta, L}^{\ast} \textrm{ in } \Omega, \]
+							subject to the initial condition $\rho_{\delta, L}(x, 0) = \rho_{0}(x)$.
+						</p>
+					</section>
+					<!--################### -->
+
+                </section>
+
+				<!--####################################################### -->
+				<section>
+				<section>
+					<h3> Finite Element approximation </h3>
+                    <hr style="width:100%; height:1px; ;color:black;background-color:black">
+				</section>
+				<!--################### -->
+				<section data-background-color="black">
+				<p style ="font-size:25px"> Fractional Porous Medium equation </p>
+				<p class="fragment" style ="font-size:25px"> \[ \left \{ \begin{aligned} &\frac{\partial \rho}{\partial t} = \Delta \rho - \nabla \cdot (\rho \nabla c) & \textrm{in } \Omega \times (0, \infty) , \\
+					& - (-\Delta)^{s} c = \rho^{\ast} & \textrm{in } \Omega \times (0, \infty), \\
+					&\partial_{n} \rho = 0, \quad \partial_{n} c = 0 & \textrm{on }\partial \Omega \times (0, \infty). \end{aligned} \right. \] </p>
+				<p class = "fragment" style ="font-size:30px"> <em> We want to design a <b> <font color ="fuchsia"> finite element </font> </b> scheme to solve the equation </em></p>
+				</section>
+
+				<!--################### -->
+				
+				<section data-background-color="black">
+				<p style ="font-size:30px"> <b> <font color ="fuchsia"> Finite Element </font> </b> scheme </p>
+				<p style ="font-size:25px" align="left"> <u> Ingredients </u>: 
+				<ul>
+					<li style="font-size:25px"> $\mathcal{T}_{h}= \{ K_{n} \}_{n=1}^{M_{h}}$ a quasi-uniform, shape regular and weakly acute triangulation of the domain, $\overline{\Omega} = \cup_{n=1}^{M_{h}} K_{n}$, </li>
+					<li style="font-size:25px">the space of continuous piecewise linear functions <br>
+							$V_{h} = \{ v_{h} \in C(\overline{\Omega}) \textrm{ such that } v_{h}\big|_{K} \in \mathbb{P}^{1} \textrm{ for all } K \in \mathcal{T}_{h} \}$,
+						 </b> </li>
+					<li style="font-size:25px"> a <font color ="fuchsia"> finite element </font> approximation of the <font color ="Cranberry"> fractional Laplacian </font>  <p class = "fragment" align="left" style ="font-size:25px; margin-left:5px"> 
+						\[ (-\Delta_{h})^{s} u_{h} := \sum_{k=1}^{N_{h}} (\lambda_{k}^{h})^{s} u_{k}^{h} \varphi_{k}^{h}  \quad \textrm{with } u_{k}^{h} := \int_{\Omega} u_{h} \varphi_{k}^{h} \,\text{d}x, \]
+					where $\varphi_{k}^{h}$ are the eigenfunctions of the bilinear form $a(\phi, \psi) = \int_{\Omega} \nabla \phi \cdot \nabla \psi \, \text{d}x$ in $V_{h} \cap L^{2}_{\ast}(\Omega)$. </p>  </li>
+					</ul>
+				</p>
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="fuchsia"> Finite Element </font> </b> scheme </p>
+					<p style ="font-size:25px" align="left">
+					<ul>
+						<li style="font-size:25px"> discrete counterpart of $\beta_{\delta}^{L}(\cdot)$, a diagonal matrix $\Theta_{\delta}^{L}(\phi_{h}) \in \mathbb{R}^{d \times d}$ defined as follows:
+							
+							<p style ="font-size:25px" align="left" class="fragment"> for $x \in \Omega$ let $K$ be the element with $x \in K$ and let $\{ P_{i} \}_{i = 0}^{d}$ be the vertices of the simplex; then, for $j = 1, \dots, d$,
+							\[
+							\widetilde{\Theta}_{\delta}^{L}(\phi_{h})_{jj}(x) = \left \{ \begin{aligned}& \frac{\phi_{h}(P_{j}) - \phi_{h}(P_{0})}{(G_{\delta}^{L})'(\phi_{h}(P_{j})) - (G_{\delta}^{L})'(\phi_{h}(P_{0}))} & \textrm{if } \phi_{h}(P_{j}) \neq \phi_{h}(P_{0}), \\
+							&\frac{1}{(G_{\delta}^{L})''(\phi_{h}(P_{j}))} = \beta_{\delta}^{L}(\phi_{h}(P_{j})) & \textrm{if } \phi_{h}(P_{j}) = \phi_{0}(P_{j}); \end{aligned} \right.
+							\]
+
+							let $\widehat{K}$ be the reference simplex and $y \mapsto P_{0} + B_{K} y$ the affine mapping which maps $\widehat{K}$ to $K$, define
+							\[
+							\Theta_{\delta}^{L}(\phi_{h})(x) = (B_{K}^{\mathrm{T}})^{-1} \widetilde{\Theta}_{\delta}^{L}(\phi_{h})(x) B_{K}^{\mathrm{T}}.
+							\]
+						</p>
+						</li>
+						</ul>
+					</section>
+
+				<!--################### -->
+
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="fuchsia"> Finite Element </font> </b> scheme </p>
+					<p style ="font-size:30px"> \[ \] </p>
+					<div  style="font-size:21px; padding: 0px">
+						For $n = 1, \dots, N$, given  $\rho_{h, \delta, L}^{n-1} \in V_{h}$  find $\rho_{h, \delta, L}^{n} \in V_{h}$ such that 
+						 \[ \int_{\Omega} \pi_{h} \bigg( \frac{\rho_{h, \delta, L}^{n} - \rho_{h, \delta, L}^{n-1}}{\Delta t} \phi_{h} \bigg) \,\text{d}x = - \int_{\Omega} \nabla \rho_{h, \delta, L}^{n} \cdot \nabla \phi_{h} \,\text{d}x + \int_{\Omega} \Theta_{\delta}^{L}(\rho_{h, \delta, L}^{n}) \nabla c_{h, \delta, L}^{n} \cdot \nabla \phi_{h} \,\text{d}x \quad \textrm{for all } \phi_{h} \in V_{h}, \]
+						where 
+						\[ - (-\Delta_{h})^{s} c_{h, \delta, L}^{n} = (\rho_{h, \delta, L}^{n})^{\ast}, \]
+						subject to the initial condition $\rho_{h, \delta, L}^{0} \in V_{h}$, solution of 
+						\[ \int_{\Omega} \rho_{h, \delta, L}^{0} \phi_{h} \, \text{d}x + \Delta t \int_{\Omega} \nabla \rho_{h, \delta, L}^{0} \cdot \nabla \phi_{h} \, \text{d}x = \int_{\Omega} \rho_{0} \phi_{h} \,  \text{d}x \quad \text{for all } \phi_{h} \in V_{h}. \]
+					</div>
+				</section>
+
+				<!--################### -->
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="fuchsia"> Finite Element </font> </b> scheme </p>
+					<p>
+					<div style="background-color:rgb(178, 40, 193); padding: 1px;">
+						<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+							<p align="left" style ="font-size:25px; margin-left:5px"> <b> Theorem </b> </p>
+							<p align="left" style ="font-size:25px; margin-left:5px"> There exists a subsequence of $\{ \rho_{h, \delta, L}^{n} \}_{\delta, h >0}$ and a nonnegative function $\rho_{L}^{n} \in V$ such that, as $\delta, h \to 0_{+}$
+								\[ \begin{aligned} \rho_{h, \delta, L}^{n} &\to \rho_{L}^{n}  &\text{strongly in} \quad &L^{2}(\Omega), \\ 
+									\nabla \rho_{h, \delta, L} &\to \nabla \rho_{L}^{n} & \text{weakly in} \quad &L^{2}(\Omega; \mathbb{R}^{d}), \\ 
+									\Theta_{\delta}^{L}(\rho_{h, \delta, L}^{n}) &\to \beta^{L}(\rho^{n}_{L}) I & \text{strongly in} \quad &L^{2}(\Omega; \mathbb{R}^{d \times d}), \\ 
+									c_{h, \delta, L}^{n} &\to c_{L}^{n} & \text{strongly in} \quad  &L^{2}_{\ast}(\Omega), \\ 
+									\nabla c_{h, \delta, L}^{n} &\to  \nabla c_{L}^{n} & \text{weakly in} \quad  &L^{2}_{\ast}(\Omega; \mathbb{R}^{d}). \end{aligned} \]
+									Moreover $\{ \rho^{n}_{L} \}_{n=1, \dots, N}$ solves a discrete-in-time scheme and given $\rho_{L}^{0}$ such that $\frac{1}{|\Omega|} \int_{\Omega} \rho^{0} \, \text{d}x = 1$, one has $\frac{1}{|\Omega|} \int_{\Omega} \rho^{n}_{L} \, \text{d}x = 1$ for all $n=1, \dots, N$ . 
+							</p>
+						</div>
+					</div> 
+					</p>
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="fuchsia"> Finite Element </font> </b> scheme </p>
+					<p>
+					<div style="background-color:rgb(178, 40, 193); padding: 1px;">
+						<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+							<p align="left" style ="font-size:25px; margin-left:5px"> 
+									Moreover $\{ \rho^{n}_{L} \}_{n=1, \dots, N}$ solves the discrete-in-time scheme: <br>
+								</p>
+							<p style ="font-size:20px; margin-left:5px"> 
+							For  $n = 1, \dots, N$, given $\rho_{L}^{n-1} \in V$ find $\rho_{L}^{n} \in V$ such that
+							\[ \int_{\Omega} \frac{\rho_{L}^{n} - \rho_{L}^{n-1}}{\Delta t} \phi \,\text{d}x = - \int_{\Omega} \nabla \rho_{L}^{n} \cdot \nabla \phi + \int_{\Omega} \beta^{L}(\rho_{L}^{n}) \nabla c_{L}^{n} \cdot \nabla \phi \quad \textrm{for all } \phi \in V, \] 
+							where
+							\[ - (-\Delta_{\mathrm{N}})^{s} c_{L}^{n} = (\rho_{L}^{n})^{\ast}, \quad \partial_{n} c_{L}^{n} = 0 \textrm{ on } \partial \Omega \]
+							subject to the initial condition $\rho_{L}^{0} = \rho^{0}$.
+							</p>
+						</div>
+					</div> 
+					</p>
+				</section>
+				
+			</section>
+				<!--####################################################### -->
+
+				<section>
+					<section>
+						<h3> Discrete-in-time approximation </h3>
+                    <hr style="width:100%; height:1px; ;color:black;background-color:black">
+					</section>
+
+					<!--################### -->
+				
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="aqua"> Discrete-in-time </font> </b> scheme </p>
+					<p style ="font-size:25px" align="left"> <u> Ingredients </u>: 
+					<ul>
+						<li style="font-size:25px"> linear interpolation in time
+							\[ \rho_{L}^{\Delta t}(\cdot, t) := \frac{t - t_{n-1}}{\Delta t} \rho_{L}^{n}(\cdot) + \frac{t_{n} - t}{\Delta t } \rho_{L}^{n-1}(\cdot), \quad t \in [t_{n-1}, t_{n}], \quad n = 1, \dots, N \]
+							\[ \rho_{L}^{\Delta t, +}(\cdot, t) := \rho_{L}^{n}(\cdot), \quad \rho_{L}^{\Delta t, -}(\cdot, t) := \rho_{L}^{n-1}(\cdot), \quad t \in (t_{n-1}, t_{n}), \quad n =1, \dots, N. \] 
+						</li>
+						</ul>
+						<div style="width: 100%;">
+							<img data-src="Lin_Interp.png" width="80%"> </img>
+						</div>
+					</p>
+
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:30px"> <b> <font color ="aqua"> Discrete-in-time </font> </b> scheme </p>
+					<p style ="font-size:25px" align="left">
+					<ul>
+						<li style="font-size:25px"> uniform bound on $L^{\infty}(\Omega)$ norm of the solution $\rho_{L}^{\Delta t}$, to get rid of the cut-off parameter $L$
+						</li> 
+						</ul>
+						<div style="background-color:rgb(190, 60, 60); padding: 1px;">
+							<div  style="background-color:black;margin-left:10px; padding: 1px;">
+								<p align="left" style ="font-size:25px; margin-left:5px"> <b> Corollary </b> </p>
+								<p align="left" style ="font-size:25px; margin-left:5px">
+									Let $\rho_{L}^{\Delta t (,\pm)}$ defined as before. The following bound holds: 
+							\[ \sup_{t \in [0,T]} \|\rho_{L}^{\Delta t (,\pm)}(t)\|_{L^{\infty}(\Omega)} \leq C \|\rho_{0}\|_{L^{\infty}(\Omega)}. \]
+								</p>
+							</div>
+						</div>
+					</p>
+
+				</section>
+
+					<!--################### -->
+				
+				<section data-background-color="black">
+						<p style ="font-size:30px"> <b> <font color ="aqua"> Discrete-in-time </font> </b> scheme </p>
+						<div  style="font-size:21px; padding: 0px"> 
+							Find $\rho^{\Delta t}(\cdot, t) \in V, t \in (0, T]$, such that 
+							\[ \int_{0}^{T} \int_{\Omega} \frac{\partial \rho^{\Delta t}}{\partial t} \phi = - \int_{0}^{T} \int_{\Omega}  \nabla \rho^{\Delta t, +} \cdot \nabla \phi + \int_{0}^{T} \int_{\Omega} \rho^{\Delta t,+} \nabla c^{\Delta t, +} \cdot \nabla \phi \quad \text{for all } \phi \in L^{1}(0, T; V), \]
+							where 
+							\[ -(-\Delta_{\mathrm{N}})^{s} c^{\Delta t, +}(\cdot, t) = (\rho_{L}^{\Delta t,+})^{\ast}(\cdot, t), \textrm{ in } \Omega,\] 
+							subject to the initial condition $\rho^{\Delta t}(x, 0) = \rho^{0}(x)$, solution of 
+							\[ \int_{\Omega} \rho^{0} \phi \, \text{d}x + \Delta t \int_{\Omega} \nabla \rho^{0} \cdot \nabla \phi \, \text{d}x = \int_{\Omega}  \rho_{0} \phi \, \text{d}x \quad \text{for all } \phi \in V. \]
+						</div>
+
+				</section>
+
+				<!--################### -->
+				<section data-background-color="black">
+					<p style ="font-size:30px"><b> <font color ="aqua"> Discrete-in-time </font> </b> scheme </p>
+					<p>
+					<div style="background-color:rgb(82, 147, 172); padding: 1px;">
+						<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+							<p align="left" style ="font-size:25px; margin-left:5px"> <b> Theorem </b> </p>
+							<p align="left" style ="font-size:22.5px; margin-left:5px"> There exists a subsequence $\{ \rho^{\Delta t(,\pm)} \}_{\Delta t>0}$ and a function $\widehat{\rho}$ such that
+								\[
+									\widehat{\rho} \in L^{\infty}(0, T, L^{\infty}(\Omega)) \cap H^{1}(0, T, H^{-\beta}(\Omega)), \quad \beta = d+1, 
+								\]
+								with $\widehat{\rho} \geq 0$ almost everywhere on $\Omega \times (0, T)$ and $\frac{1}{|\Omega|} \int_{\Omega} \widehat{\rho}(x, t) \, \text{d}x = 1$ for a.e. $t \in [0, T]$, and a function $\widehat{c}(\cdot, t) \in \mathbb{H}^{s}(\Omega) \cap H^{1}_{\ast}(\Omega)$, defined as $-(-\Delta_{\mathrm{N}})^{s} \widehat{c} = \widehat{\rho}^{\ast}$, such that, for all $p \in [1, \infty)$, as $\Delta t \to 0$,
+								\[ \begin{aligned}
+								\rho^{\Delta t(,\pm)} & \to \widehat{\rho} &\text{strongly in} \quad & L^{p}(0,T;L^{1}(\Omega)), \\
+								\nabla \sqrt{\rho^{\Delta t(,\pm)}} & \to \nabla \sqrt{\widehat{\rho}} &\text{weakly in} \quad & L^{2}(0,T;L^{2}(\Omega; \mathbb{R}^{d})), \\
+								\frac{\partial \rho^{\Delta t}}{\partial t} & \to \frac{\partial \widehat{\rho}}{\partial t} &\text{weakly in} \quad & L^{2}(0,T; H^{-\beta}(\Omega)), \\
+								\rho^{\Delta t(,\pm)} & \to \widehat{\rho} &\text{weakly-$*$ in} \quad & L^{\infty}(0,T;L^{\infty}(\Omega)),  \\
+								\rho^{\Delta t(,\pm)} & \to \widehat{\rho} &\text{strongly in} \quad & L^{p}(0,T;L^{p}(\Omega)), 
+									\end{aligned} \]
+							</p>
+						</div>
+					</div> 
+					</p>
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:30px"><b> <font color ="teal"> Discrete-in-time </font> </b> scheme </p>
+					<p>
+					<div style="background-color:rgb(82, 147, 172); padding: 1px;">
+						<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+							<p align="left" style ="font-size:22.5px; margin-left:5px">
+						\[ \begin{aligned}
+					c^{\Delta t(,\pm)} & \to \widehat{c} & \text{strongly in} \quad & L^{p}(0, T; \mathbb{H}^{s}(\Omega)), \\
+					\nabla c^{\Delta t, +} & \to \nabla \widehat{c} & \text{weakly in} \quad & L^{2}(0, T; L^{2}(\Omega; \mathbb{R}^{d})).
+						\end{aligned} \]
+					Moreover the function $\widehat{\rho}$ is a global weak solution to the problem 
+					</p>
+					<p align="left" style ="font-size:20px; margin-left:5px">
+					\[ \begin{gathered}
+						-\int_{0}^{T} \int_{\Omega} \widehat{\rho} \frac{\partial \phi}{\partial t} \, \text{d}x \, \text{d}t + \int_{0}^{T} \int_{\Omega}  \nabla \widehat{\rho} \cdot \nabla \phi \, \text{d}x \, \text{d}t + \int_{0}^{T} \int_{\Omega} \widehat{\rho} \, \nabla \widehat{c} \cdot \nabla \phi \, \text{d}x \, \text{d}t= \int_{\Omega} \rho_{0} \;\phi|_{t=0} \, \text{d}x \\
+						\text{for all } \phi \in W^{1,1}(0, T; H^{\beta}(\Omega)) \text{ such that } \phi(., T) = 0. \end{gathered}  \] </p>
+						<p align="left" style ="font-size:22.5px; margin-left:5px">
+						In addition, the function $\widehat{\rho}$ is weak-$*$ continuous as a mapping from $[0,T]$ to $L^{\infty}(\Omega)$ and it is weakly continuous as a mapping from $[0, T]$ to $L^{1}(\Omega)$. The energy functional $E(\cdot)$ satisfies the inequality
+						\[ E(\widehat{\rho}(t)) + \int_{0}^{t} \int_{\Omega} \bigg| 2 \nabla \sqrt{\widehat{\rho}} - \sqrt{\widehat{\rho}} \nabla \widehat{c} \bigg|^{2} \text{d}x \text{d}\tau \leq E(\rho_{0}), \]
+						for a.e. $t \in [0, T]$.
+							</p>
+						</div>
+					</div> 
+					</p>
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:30px"><b> Exponential decay </b> properties </p>
+					<p>
+					<div style="background-color:rgb(82, 147, 172); padding: 1px;">
+						<div  style="background-color:black ;margin-left:10px; padding: 1px;">
+							<p align="left" style ="font-size:25px; margin-left:5px"> <b> Theorem </b> </p>
+							<p align="left" style ="font-size:22.5px; margin-left:5px"> 
+								$(a)$ For any $T>0$, the functional $G(\cdot)$, exhibits exponential decay,
+								\[ \int_{\Omega} G(\widehat{\rho}(T)) \text{d}x \leq e^{-\frac{2T}{C_{\Omega} \| \rho_{0} \|_{L^{\infty}(\Omega)}}} \int_{\Omega} G(\rho_{0}) \text{d}x. \]
+								$(b)$ The function $\widehat{\rho}$ satisfies the inequality 
+								\[ \frac{1}{2 |\Omega|} \| \widehat{\rho}(\cdot, T) - 1 \|_{L^{1}(\Omega)}^{2} \leq e^{-\frac{2T}{C_{\Omega} \| \rho_{0} \|_{L^{\infty}(\Omega)}}} \int_{\Omega} E(\rho_{0}) \text{d}x. \]
+								$(c)$ Assuming in addition that $\Omega$ is convex and that $s \in (1/2, 1)$, the energy functional $E(\cdot)$ exhibits exponential decay,
+								\[ \int_{\Omega} E(\widehat{\rho}(T)) \text{d}x \leq  e^{-\frac{8T}{3C_{\Omega} \| \rho_{0} \|_{L^{\infty}(\Omega)}}} \int_{\Omega} E(\rho_{0}) \text{d}x. \]
+							</p>
+						</div>
+					</div> 
+					</p>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;"> Consider different initial data $\rho_{0}$ on $\Omega = (0,1)^{2}$, we can check the exponential convergence to equilibrium.
+					</p>
+					<div class = "fragment" style="width: 100%; float:left;">
+						<img data-src="TestTheorem.png" width="75%"> </img>
+					</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;"> 
+					</p>
+					<p align="left" style="font-size:25px;"> We can get simulations for the fractional porous medium equation for different fractional orders on a large variety of domains, in an efficient and fast way. We can compare different self similar profiles to see the effect of having fractional Laplacian in the potential
+						</p>	
+						<div class = "fragment" style="width: 100%; float:left;">
+							<p style="font-size:20px"> central section of 2D simulations </p>
+							<img data-src="Profiles_SS_348.png" width="60%"> </img>
+						</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;"> Property: the <b> <font color="teal"> comparison principle </font> </b> does not hold. </p>
+					<p class ="fragment" align="left" style="font-size:25px;"> Consider different initial data $u_{1}$ and $u_2$ on $\Omega = (0,1)^{2}$, <u> initially ordered </u> $u_1 \leq u_2$: for some $c>0$
+						\[ u_1(x) = \exp(-|x-2|^2/c), \qquad u_2(x) = \exp(-|x-2|^2/c) + 2 \exp(-|x+2|^2/c). \]
+					</p>
+					<div class = "fragment" style="width: 100%; float:left;">
+						<img data-src="HeatMap0Q4_.png" width="100%"> </img>
+					</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;"> Property: the <b> <font color="teal"> comparison principle </font> </b> does not hold. </p>
+					<p align="left" style="font-size:25px;"> Consider different initial data $u_{1}$ and $u_2$ on $\Omega = (-5,5)^{2}$, <u> initially ordered </u> $u_1 \leq u_2$: for some $c>0$
+						\[ u_1(x) = \exp(-|x-2|^2/c), \qquad u_2(x) = \exp(-|x-2|^2/c) + 2 \exp(-|x+2|^2/c). \]
+					</p>
+					<div style="width: 100%; float:left;">
+						<p style="font-size:20px"> diagonal section </p>
+						<img data-src="Profiles_NoComPrincQ4_0.png" width="50%"> </img>
+					</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;"> Property: the <b> <font color="teal"> comparison principle </font> </b> does not hold. </p>
+					<p align="left" style="font-size:25px;"> Consider different initial data $u_{1}$ and $u_2$ on $\Omega = (-5,5)^{2}$, <u> initially ordered </u> $u_1 \leq u_2$: for some $c>0$
+						\[ u_1(x) = \exp(-|x-2|^2/c), \qquad u_2(x) = \exp(-|x-2|^2/c) + 2 \exp(-|x+2|^2/c). \]
+					</p>
+					<div style="width: 100%; float:left;">
+						<img data-src="HeatMap0Q4_.png" width="100%"> </img>
+					</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;"> Property: the <b> <font color="teal"> comparison principle </font> </b> does not hold. </p>
+					<p align="left" style="font-size:25px;"> Consider different initial data $u_{1}$ and $u_2$ on $\Omega = (-5,5)^{2}$, <u> initially ordered </u> $u_1 \leq u_2$: for some $c>0$
+						\[ u_1(x) = \exp(-|x-2|^2/c), \qquad u_2(x) = \exp(-|x-2|^2/c) + 2 \exp(-|x+2|^2/c). \]
+					</p>
+					<div class = "fragment" style="width: 100%;">
+						<p style="font-size:20px"> central section </p>
+						<video data-autoplay src="video_NoComPrincQ4.mp4" height="400px" loop="loop"></video>
+					</div>
+				</section>
+
+
+				</section>
+
+				<!--####################################################### -->
+
+			<section>
+				<section>
+					<h3> The fractional Keller-Segel model  </h3>
+				<hr style="width:100%; height:1px; ;color:black;background-color:black">
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:25px"> Fractional Porous Medium equation </p>
+				<p style ="font-size:25px"> \[ \left \{ \begin{aligned} &\frac{\partial \rho}{\partial t} = \Delta \rho - \nabla \cdot (\rho \nabla c) & \textrm{in } \Omega \times (0, \infty) , \\
+					& - (-\Delta)^{s} c = \rho^{\ast} & \textrm{in } \Omega \times (0, \infty), \\
+					&\partial_{n} \rho = 0, \quad \partial_{n} c = 0 & \textrm{on }\partial \Omega \times (0, \infty). \end{aligned} \right. \] </p>
+					<p align="left" class="fragment" style ="font-size:25px"> <u> <font color="SlateBlue"> Question </font> </u>: what if the same potential becomes <font color="MediumVioletRed"> attractive </font>? </p>
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:25px"> Fractional Keller-Segel equation </p>
+				<p style ="font-size:25px"> \[ \left \{ \begin{aligned} &\frac{\partial \rho}{\partial t} = \Delta \rho - \nabla \cdot (\rho \nabla c) & \textrm{in } \Omega \times (0, \infty) , \\
+					& (-\Delta)^{s} c = \rho^{\ast} & \textrm{in } \Omega \times (0, \infty), \\
+					&\partial_{n} \rho = 0, \quad \partial_{n} c = 0 & \textrm{on }\partial \Omega \times (0, \infty). \end{aligned} \right. \] </p>
+					<p align="left" class="fragment" style ="font-size:25px"> It is well know that <font color="Crimson"> blow-up</font> of the solution can occurr. </p>
+					<p align="left" class="fragment" style ="font-size:25px"> For standard Keller-Segel ($s=1$) on $\mathbb{R}^{2}$ the <font color="Crimson"> blow-up</font> depends only on the <u> initial mass</u> of the solution $M = \int_{\mathbb{R}^{d}} \rho_{0} \, \text{d}x$:
+					\[ M < 8 \pi \Longrightarrow \text{NO blow-up} \]
+					\[ M > 8 \pi \Longrightarrow \text{blow-up} \]</p>
+				</section>
+
+				<section data-background-color="black">
+					<p style ="font-size:25px"> Fractional Keller-Segel equation </p>
+				<p style ="font-size:25px"> \[ \left \{ \begin{aligned} &\frac{\partial \rho}{\partial t} = \Delta \rho - \nabla \cdot (\rho \nabla c) & \textrm{in } \Omega \times (0, \infty) , \\
+					& (-\Delta)^{s} c = \rho^{\ast} & \textrm{in } \Omega \times (0, \infty), \\
+					&\partial_{n} \rho = 0, \quad \partial_{n} c = 0 & \textrm{on }\partial \Omega \times (0, \infty). \end{aligned} \right. \] </p>
+					<p align="left" style ="font-size:25px"> For fractional Keller-Segel ($s \in (0,1)$) it is know that the <font color="Crimson"> blow-up</font> depends not only on the <u> initial mass</u> of the solution $M = \int_{\mathbb{R}^{d}} \rho_{0} \, \text{d}x$, but also on its <u> initial concentration </u> $\int_{\mathbb{R}^{d}} |x|^{2} \rho \, \text{d}x$ (P. Biler and W. A. Woyczynski. "<em>Global and Exploding Solutions for Nonlocal Quadratic Evolution Problems</em>".)</p>
+					<p align="left" style ="font-size:25px">We would like to investigate numerically this model and its features.</p>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;">
+						Consider the unit ball $\Omega = B(0, 1) \subset \mathbb{R}^{2}$, $s = 3/4$ and different initial data, $\rho_{0} \propto e^{-\frac{|x|^{2}}{2\sigma}}$ Gaussians with different initial mass $M$ and different concentration $\sigma$. We study blow-up (orange cell) and no blow-up (green cell). 
+						</p>	
+						<div class = "fragment" style="width: 100%; float:left;">
+							<img data-src="BlowUpID7.png" width="60%"> </img>
+						</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;">
+						Consider the unit ball $\Omega = B(0, 1) \subset \mathbb{R}^{2}$, $s = 3/4$ and different initial data, $\rho_{0} \propto e^{-\frac{|x|^{2}}{2\sigma}}$ Gaussians with same initial mass $M=4\pi$ and different concentration $\sigma$. We look to the evolution in time of the $\max( \| \rho \|_{L^\infty(\Omega)}, |\rho|_{H^1(\Omega)} )$ norm of the solution and its second moment. 
+						</p>	
+						<div class = "fragment" style="width: 100%; float:left;">
+							<img data-src="BlowUPHeatMap.png" width="60%"> </img>
+						</div>
+				</section>
+
+				<section>
+					<p align="left" style="font-size:25px;">
+						Consider the unit ball $\Omega = B(0, 1) \subset \mathbb{R}^{2}$, we can explore the baheviour of the model taking a lower fractional order $s = 1/2 + \varepsilon$ and different initial data, Gaussians with different initial mass $M$ and different concentration $\sigma$. We study blow-up (orange cell) and no blow-up (green cell). 
+						</p>	
+						<div class = "fragment" style="width: 100%; float:left;">
+							<img data-src="BlowUpID5.png" width="60%"> </img>
+						</div>
+				</section>
+
+			</section>
+
+			<!--####################################################### -->
+
+	
+
+				<!--####################################################### -->
+				<section>
+					<section>
+					<h3>Thank you for the attention </h3>
+				     </section>
+
+					<section>
+						<p style="font-size:25px;"> <em>If you want to know more... </em>
+						</p>
+						<div class = fragment style="width: 100%;">
+							<img data-src="Paper.png" width="80%"> </img>
+						</div>
+					</section>
+				</section>
+
+			</div>
+			</div>
+			
+		
+
+		<script src="reveal.js/dist/reveal.js"></script>
+		<script src="reveal.js/plugin/notes/notes.js"></script>
+		<script src="reveal.js/plugin/markdown/markdown.js"></script>
+		<script src="reveal.js/plugin/highlight/highlight.js"></script>
+		<script src="reveal.js/plugin/math/math.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				autoPlayMedia: true,
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX ]
+			});
+		</script>
+	</body>
+</html>
+
